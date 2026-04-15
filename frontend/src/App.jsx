@@ -1,9 +1,12 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import Webcam from 'react-webcam'
 import { motion } from 'framer-motion'
-import { Camera, Upload, Activity, AlertCircle, BarChart3, Clock } from 'lucide-react'
+import { Camera, Upload, Activity, AlertCircle, BarChart3, Clock, Volume2, Send, LogOut } from 'lucide-react'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import Login from './components/Login'
+import Navbar from './components/Navbar'
 
-const API_BASE = 'http://localhost:8001'
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8001'
 
 function App() {
   const [mode, setMode] = useState('webcam') // 'webcam' or 'upload'
@@ -11,8 +14,134 @@ function App() {
   const [processedImage, setProcessedImage] = useState(null)
   const [count, setCount] = useState(0)
   const [timings, setTimings] = useState({ green: 30, red: 20, yellow: 5 })
+  const [user, setUser] = useState(null)
+  const [loading, setLoading] = useState(true)
+  
+  // Chat state
+  const [isNarrating, setIsNarrating] = useState(false)
+  const [chatMessages, setChatMessages] = useState([
+    { role: 'assistant', content: 'Hello! I am your AI Traffic Assistant. How can I help you today?' }
+  ])
+  const [isChatOpen, setIsChatOpen] = useState(false)
+  const [chatInput, setChatInput] = useState('')
+  const [isChatLoading, setIsChatLoading] = useState(false)
+
+  // Auth check on mount
+  useEffect(() => {
+    const savedUser = localStorage.getItem('traffic_user')
+    if (savedUser) {
+      setUser(JSON.parse(savedUser))
+    }
+    setLoading(false)
+  }, [])
+
+  const handleLoginSuccess = async (credentialResponse) => {
+    try {
+      const { credential } = credentialResponse
+      const response = await fetch(`${API_BASE}/auth/google`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: credential }),
+      })
+      const data = await response.json()
+      
+      if (data.success) {
+        setUser(data.user)
+        localStorage.setItem('traffic_user', JSON.stringify(data.user))
+      } else {
+        console.error("Auth failed:", data.error)
+      }
+    } catch (error) {
+      console.error("Login error:", error)
+    }
+  }
+
+  const handleLogout = () => {
+    setUser(null)
+    localStorage.removeItem('traffic_user')
+    resetAnalysis()
+  }
   const webcamRef = useRef(null)
   const fileInputRef = useRef(null)
+  const utteranceRef = useRef(null) // Prevent garbage collection
+
+  const handleNarrate = async () => {
+    if (isNarrating) {
+      window.speechSynthesis.cancel()
+      setIsNarrating(false)
+      return
+    }
+
+    try {
+      setIsNarrating(true)
+      
+      const response = await fetch(`${API_BASE}/narrate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ count, timings }),
+      })
+      const data = await response.json()
+      
+      if (data.narrative) {
+        // Setup Speech
+        const utterance = new SpeechSynthesisUtterance(data.narrative)
+        utteranceRef.current = utterance // Store in ref
+        
+        utterance.onend = () => {
+          setIsNarrating(false)
+          utteranceRef.current = null
+        }
+        utterance.onerror = () => {
+          setIsNarrating(false)
+          utteranceRef.current = null
+        }
+        
+        window.speechSynthesis.speak(utterance)
+      } else {
+        setIsNarrating(false)
+      }
+    } catch (error) {
+      console.error("Narration error:", error)
+      setIsNarrating(false)
+    }
+  }
+
+  const handleSendMessage = async (e) => {
+    e.preventDefault()
+    if (!chatInput.trim() || isChatLoading) return
+
+    const userMessage = { role: 'user', content: chatInput }
+    setChatMessages(prev => [...prev, userMessage])
+    setChatInput('')
+    setIsChatLoading(true)
+
+    try {
+      const response = await fetch(`${API_BASE}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: chatInput,
+          count: count,
+          timings: timings
+        }),
+      })
+      const data = await response.json()
+      
+      setChatMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: data.response || "I'm having trouble connecting to the traffic database." 
+      }])
+    } catch (error) {
+      console.error("Chat error:", error)
+      setChatMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: "System error: Chat offline." 
+      }])
+    } finally {
+      setIsChatLoading(false)
+    }
+  }
+
 
   // Webcam Capture Loop
   const capture = useCallback(async () => {
@@ -87,72 +216,58 @@ function App() {
       setProcessedImage(null)
       setCount(0)
       setTimings({ green: 0, red: 0, yellow: 0 })
+    } else {
+      window.speechSynthesis.cancel()
+      setIsNarrating(false)
     }
     setIsDetecting(!isDetecting)
   }
 
   const resetAnalysis = () => {
+    window.speechSynthesis.cancel()
+    setIsNarrating(false)
     setProcessedImage(null)
     setCount(0)
     setTimings({ green: 0, red: 0, yellow: 0 })
     setIsDetecting(false)
   }
 
+  if (loading) return null
+
+  if (!user) {
+    return (
+      <Login 
+        onSuccess={handleLoginSuccess} 
+        onFailure={() => console.error("Google Login Failed")} 
+      />
+    )
+  }
+
   return (
-    <div className="app-container">
-      {/* Sidebar */}
-      <aside className="sidebar">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <Activity color="#38bdf8" size={32} />
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, letterSpacing: '1px' }}>AI TRAFFIC</h2>
-        </div>
+    <div className="app-main">
+      <Navbar 
+        mode={mode} 
+        setMode={setMode} 
+        onLogout={handleLogout}
+        isChatOpen={isChatOpen}
+        toggleChat={() => setIsChatOpen(!isChatOpen)}
+      />
+      
+      <div className="app-container dashboard-layout">
+        <main className="main-content">
+          <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <h1 style={{ fontSize: '2rem', fontWeight: 900 }}>City Command Center</h1>
+              <p style={{ color: 'var(--text-secondary)' }}>Operator: {user.name} | Active Portal</p>
+            </div>
+            <div className="card" style={{ padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#4ade80' }} />
+              <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>SYSTEM ONLINE</span>
+            </div>
+          </header>
 
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '1rem' }}>
-          <div
-            className={`nav-item ${mode === 'webcam' ? 'active' : ''}`}
-            onClick={() => { setMode('webcam'); resetAnalysis(); }}
-          >
-            <Camera size={20} />
-            <span>Live Detection</span>
-          </div>
-          <div
-            className={`nav-item ${mode === 'upload' ? 'active' : ''}`}
-            onClick={() => { setMode('upload'); resetAnalysis(); }}
-          >
-            <Upload size={20} />
-            <span>Static Analysis</span>
-          </div>
-        </nav>
-
-        {/* <div className="card" style={{ marginTop: 'auto' }}>
-          <div className="status-badge">
-            <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#4ade80' }} />
-            SYSTEM ONLINE
-          </div>
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '1rem' }}>
-            Model: YOLOv8 Nano<br />
-            Framework: React 19<br />
-            API: FastAPI<br />
-            Latency: ~120ms
-          </p>
-        </div> */}
-      </aside>
-
-      {/* Main Content */}
-      <main className="main-content">
-        <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <h1 style={{ fontSize: '2rem', fontWeight: 900 }}>Traffic Command Center</h1>
-            <p style={{ color: 'var(--text-secondary)' }}>Automated Computer Vision Surveillance</p>
-          </div>
-          <div className="card" style={{ padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Clock size={16} color="var(--accent-amber)" />
-            <span style={{ fontSize: '0.875rem' }}>Real-time Feed</span>
-          </div>
-        </header>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '2rem' }}>
-          <div className="card" style={{ padding: 0, overflow: 'hidden', minHeight: '500px' }}>
+        <div className="main-grid">
+          <div className="card" style={{ padding: 0, overflow: 'hidden', minHeight: '500px', display: 'flex', flexDirection: 'column' }}>
             <div className="feed-container">
               {mode === 'webcam' ? (
                 <>
@@ -229,10 +344,27 @@ function App() {
             </div>
 
             <div className="card">
-              <h3 style={{ fontSize: '0.875rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent-cyan)' }}>
-                <Clock size={16} />
-                AI SIGNAL TIMING
-              </h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                <h3 style={{ fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent-cyan)' }}>
+                  <Clock size={16} />
+                  AI SIGNAL TIMING
+                </h3>
+                <button 
+                  onClick={handleNarrate}
+                  className={`voice-btn ${isNarrating ? 'playing' : ''}`}
+                  title="Explain traffic status"
+                  style={{
+                    padding: '0.5rem',
+                    borderRadius: '50%',
+                    background: isNarrating ? 'var(--accent-cyan)' : 'rgba(255,255,255,0.05)',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  <Volume2 size={18} color={isNarrating ? '#000' : 'var(--accent-cyan)'} />
+                </button>
+              </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>Green Signal</span>
@@ -261,6 +393,7 @@ function App() {
               </div>
             </div>
 
+
             {/* <div className="card">
               <h3 style={{ fontSize: '0.875rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent-amber)' }}>
                 <AlertCircle size={16} />
@@ -283,6 +416,59 @@ function App() {
           </div>
         </div>
       </main>
+    </div>
+
+      {/* Floating Chatbot Widget */}
+      <div className={`chatbot-widget ${isChatOpen ? 'open' : ''}`}>
+        <motion.div 
+          className="chat-toggle"
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => setIsChatOpen(!isChatOpen)}
+        >
+          {isChatOpen ? '×' : '💬'}
+        </motion.div>
+
+        {isChatOpen && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            className="chat-window card"
+          >
+            <div className="chat-header">
+              <Activity size={18} color="var(--accent-cyan)" />
+              <span>Traffic Assistant</span>
+            </div>
+            
+            <div className="chat-messages">
+              {chatMessages.map((msg, i) => (
+                <div key={i} className={`message ${msg.role}`}>
+                  <div className="message-content">{msg.content}</div>
+                </div>
+              ))}
+              {isChatLoading && (
+                <div className="message assistant">
+                  <div className="message-content typing-indicator">
+                    <span>.</span><span>.</span><span>.</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <form onSubmit={handleSendMessage} className="chat-input-area">
+              <input 
+                type="text" 
+                placeholder="Ask about traffic, signals..."
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+              />
+              <button type="submit" disabled={isChatLoading}>
+                <Send size={16} />
+              </button>
+            </form>
+          </motion.div>
+        )}
+      </div>
     </div>
   )
 }

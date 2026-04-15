@@ -5,3 +5,9 @@ pygame
 fastapi
 uvicorn
 python-multipart
+groq
+google-generativeai
+python-dotenv
+nltk
+google-auth
+ requests
