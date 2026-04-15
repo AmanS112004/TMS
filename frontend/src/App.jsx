@@ -53,6 +53,10 @@ function App() {
     const file = e.target.files[0]
     if (!file) return
 
+    // Clear old result to show we are processing
+    setProcessedImage(null)
+    setCount(0)
+
     const formData = new FormData()
     formData.append('file', file)
 
@@ -69,6 +73,18 @@ function App() {
     } catch (error) {
       console.error("Upload error:", error)
     }
+    
+    // Reset file input so same file can be uploaded again if needed
+    e.target.value = ''
+  }
+
+  const toggleDetection = () => {
+    if (!isDetecting) {
+      // Clear old state when starting fresh detection
+      setProcessedImage(null)
+      setCount(0)
+    }
+    setIsDetecting(!isDetecting)
   }
 
   const resetAnalysis = () => {
@@ -135,18 +151,24 @@ function App() {
             <div className="feed-container">
               {mode === 'webcam' ? (
                 <>
-                  {!processedImage || !isDetecting ? (
-                    <Webcam
-                      ref={webcamRef}
-                      screenshotFormat="image/jpeg"
-                      className="feed-canvas"
-                      videoConstraints={{ facingMode: "user" }}
-                    />
-                  ) : (
-                    <img src={processedImage} className="feed-canvas" alt="Processed Stream" />
+                  {/* Keep Webcam ALWAYS mounted so the capture loop never breaks */}
+                  <Webcam
+                    ref={webcamRef}
+                    screenshotFormat="image/jpeg"
+                    className="feed-canvas"
+                    style={{ 
+                      display: (isDetecting && processedImage) ? 'none' : 'block' 
+                    }}
+                    videoConstraints={{ facingMode: "user" }}
+                  />
+                  
+                  {/* Show processed results as an overlay */}
+                  {isDetecting && processedImage && (
+                    <img src={processedImage} className="feed-canvas" alt="Processed stream" />
                   )}
+                  
                   <div style={{ position: 'absolute', bottom: '1.5rem', right: '1.5rem', zIndex: 10 }}>
-                    <button onClick={() => setIsDetecting(!isDetecting)}>
+                    <button onClick={toggleDetection}>
                       {isDetecting ? 'TERMINATE ANALYSIS' : 'INITIATE ANALYSIS'}
                     </button>
                   </div>
