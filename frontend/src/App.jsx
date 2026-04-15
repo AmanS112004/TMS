@@ -10,6 +10,7 @@ function App() {
   const [isDetecting, setIsDetecting] = useState(false)
   const [processedImage, setProcessedImage] = useState(null)
   const [count, setCount] = useState(0)
+  const [timings, setTimings] = useState({ green: 30, red: 20, yellow: 5 })
   const webcamRef = useRef(null)
   const fileInputRef = useRef(null)
 
@@ -29,10 +30,11 @@ function App() {
         body: formData,
       })
       const data = await response.json()
-      
+
       if (data.image) {
         setProcessedImage(data.image)
         setCount(data.count)
+        if (data.timings) setTimings(data.timings)
       }
     } catch (error) {
       console.error("Detection error:", error)
@@ -69,11 +71,12 @@ function App() {
       if (data.image) {
         setProcessedImage(data.image)
         setCount(data.count)
+        if (data.timings) setTimings(data.timings)
       }
     } catch (error) {
       console.error("Upload error:", error)
     }
-    
+
     // Reset file input so same file can be uploaded again if needed
     e.target.value = ''
   }
@@ -83,6 +86,7 @@ function App() {
       // Clear old state when starting fresh detection
       setProcessedImage(null)
       setCount(0)
+      setTimings({ green: 0, red: 0, yellow: 0 })
     }
     setIsDetecting(!isDetecting)
   }
@@ -90,6 +94,7 @@ function App() {
   const resetAnalysis = () => {
     setProcessedImage(null)
     setCount(0)
+    setTimings({ green: 0, red: 0, yellow: 0 })
     setIsDetecting(false)
   }
 
@@ -103,14 +108,14 @@ function App() {
         </div>
 
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '1rem' }}>
-          <div 
+          <div
             className={`nav-item ${mode === 'webcam' ? 'active' : ''}`}
             onClick={() => { setMode('webcam'); resetAnalysis(); }}
           >
             <Camera size={20} />
             <span>Live Detection</span>
           </div>
-          <div 
+          <div
             className={`nav-item ${mode === 'upload' ? 'active' : ''}`}
             onClick={() => { setMode('upload'); resetAnalysis(); }}
           >
@@ -119,7 +124,7 @@ function App() {
           </div>
         </nav>
 
-        <div className="card" style={{ marginTop: 'auto' }}>
+        {/* <div className="card" style={{ marginTop: 'auto' }}>
           <div className="status-badge">
             <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#4ade80' }} />
             SYSTEM ONLINE
@@ -130,7 +135,7 @@ function App() {
             API: FastAPI<br />
             Latency: ~120ms
           </p>
-        </div>
+        </div> */}
       </aside>
 
       {/* Main Content */}
@@ -156,17 +161,17 @@ function App() {
                     ref={webcamRef}
                     screenshotFormat="image/jpeg"
                     className="feed-canvas"
-                    style={{ 
-                      display: (isDetecting && processedImage) ? 'none' : 'block' 
+                    style={{
+                      display: (isDetecting && processedImage) ? 'none' : 'block'
                     }}
                     videoConstraints={{ facingMode: "user" }}
                   />
-                  
+
                   {/* Show processed results as an overlay */}
                   {isDetecting && processedImage && (
                     <img src={processedImage} className="feed-canvas" alt="Processed stream" />
                   )}
-                  
+
                   <div style={{ position: 'absolute', bottom: '1.5rem', right: '1.5rem', zIndex: 10 }}>
                     <button onClick={toggleDetection}>
                       {isDetecting ? 'TERMINATE ANALYSIS' : 'INITIATE ANALYSIS'}
@@ -174,7 +179,7 @@ function App() {
                   </div>
                 </>
               ) : (
-                <div 
+                <div
                   className="upload-zone"
                   onClick={() => fileInputRef.current?.click()}
                   style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', margin: '1rem' }}
@@ -188,16 +193,16 @@ function App() {
                       <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem' }}>Drag and drop or click to browse</p>
                     </>
                   )}
-                  <input 
-                    type="file" 
-                    ref={fileInputRef} 
-                    style={{ display: 'none' }} 
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    style={{ display: 'none' }}
                     onChange={handleFileUpload}
                     accept="image/*"
                   />
                   {processedImage && (
-                    <button 
-                      className="btn-secondary" 
+                    <button
+                      className="btn-secondary"
                       style={{ position: 'absolute', bottom: '1.5rem' }}
                       onClick={(e) => { e.stopPropagation(); resetAnalysis(); }}
                     >
@@ -212,7 +217,7 @@ function App() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             <div className="stat-card" style={{ position: 'relative' }}>
               <span className="stat-label">Total Vehicles</span>
-              <motion.span 
+              <motion.span
                 key={count}
                 initial={{ scale: 1.5, color: '#fff' }}
                 animate={{ scale: 1, color: 'var(--accent-cyan)' }}
@@ -224,6 +229,39 @@ function App() {
             </div>
 
             <div className="card">
+              <h3 style={{ fontSize: '0.875rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent-cyan)' }}>
+                <Clock size={16} />
+                AI SIGNAL TIMING
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Green Signal</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: '#4ade80', boxShadow: '0 0 10px #4ade80' }} />
+                    <span style={{ fontWeight: 800, fontSize: '1.25rem' }}>{timings.green}s</span>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Red Signal</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: '#f87171', boxShadow: '0 0 10px #f87171' }} />
+                    <span style={{ fontWeight: 800, fontSize: '1.25rem' }}>{timings.red}s</span>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Yellow Signal</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: '#fbbf24', boxShadow: '0 0 10px #fbbf24' }} />
+                    <span style={{ fontWeight: 800, fontSize: '1.25rem' }}>{timings.yellow}s</span>
+                  </div>
+                </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem', padding: '0.75rem', backgroundColor: 'rgba(56, 189, 248, 0.05)', borderRadius: '0.5rem', border: '1px solid rgba(56, 189, 248, 0.1)' }}>
+                  Signal times are dynamically optimized based on real-time vehicle density.
+                </div>
+              </div>
+            </div>
+
+            {/* <div className="card">
               <h3 style={{ fontSize: '0.875rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent-amber)' }}>
                 <AlertCircle size={16} />
                 LIVE ANALYTICS
@@ -241,7 +279,7 @@ function App() {
                   System is actively scanning for Cars, Trucks, Buses, and Motorcycles.
                 </div>
               </div>
-            </div>
+            </div> */}
           </div>
         </div>
       </main>

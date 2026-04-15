@@ -11,23 +11,31 @@ class TrafficSignalController:
         self.min_yellow_time = 3   # Minimum yellow time
 
     def update_signal_timings(self, vehicle_count):
-        # Adjust green signal time based on vehicle count
-        if vehicle_count > 50:
-            self.green_time = min(self.green_time + 5, self.max_green_time)
-        elif vehicle_count < 10:
-            self.green_time = max(self.green_time - 5, self.min_green_time)
+        """
+        Calculates signal timings dynamically and statelessly.
+        If count is 0, it drops all signals to 0 for a full reset.
+        """
+        if vehicle_count == 0:
+            self.green_time = 0
+            self.red_time = 0
+            self.yellow_time = 0
+            return
+
+        # --- DYNAMIC FORMULAS (Active Traffic) ---
         
-        # Adjust red signal time based on vehicle count
-        if vehicle_count > 30:
-            self.red_time = min(self.red_time + 5, self.max_red_time)
-        elif vehicle_count < 20:
-            self.red_time = max(self.red_time - 5, self.min_red_time)
+        # Green: Base 10s + 2s per vehicle
+        self.green_time = min(10 + (vehicle_count * 2), self.max_green_time)
         
-        # Adjust yellow signal time based on other factors
-        if vehicle_count > 30:
-            self.yellow_time = min(self.yellow_time + 1, self.max_yellow_time)
-        elif vehicle_count < 20:
-            self.yellow_time = max(self.yellow_time - 1, self.min_yellow_time)
+        # Red: Based on opposing density (Base 15s + 1s per vehicle)
+        self.red_time = min(15 + vehicle_count, self.max_red_time)
+        
+        # Yellow: Proportional to density
+        if vehicle_count > 40:
+            self.yellow_time = 6
+        elif vehicle_count > 20:
+            self.yellow_time = 5
+        else:
+            self.yellow_time = 4
 
     def print_signal_timings(self):
         print("Green Signal Time:", self.green_time, "seconds")

@@ -10,6 +10,7 @@ from typing import List
 # Add parent directory to path so we can import vehicle_detection
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from vehicle_detection import VehicleDetector
+from signal_time import TrafficSignalController
 
 app = FastAPI(title="AI Smart Traffic API")
 
@@ -23,6 +24,7 @@ app.add_middleware(
 )
 
 detector = VehicleDetector()
+signal_controller = TrafficSignalController()
 
 @app.get("/")
 async def root():
@@ -48,13 +50,22 @@ async def detect_frame(image: str = Form(...)):
         # Run detection
         processed_img, count = detector.detect(img)
         
+        # Calculate signal timings
+        signal_controller.update_signal_timings(count)
+        timings = {
+            "green": signal_controller.green_time,
+            "red": signal_controller.red_time,
+            "yellow": signal_controller.yellow_time
+        }
+        
         # Encode result back to base64
         _, buffer = cv2.imencode('.jpg', processed_img)
         processed_base64 = base64.b64encode(buffer).decode('utf-8')
         
         return {
             "image": f"data:image/jpeg;base64,{processed_base64}",
-            "count": count
+            "count": count,
+            "timings": timings
         }
     except Exception as e:
         return {"error": str(e)}
@@ -75,6 +86,14 @@ async def detect_upload(file: UploadFile = File(...)):
         # Run detection
         processed_img, count = detector.detect(img)
         
+        # Calculate signal timings
+        signal_controller.update_signal_timings(count)
+        timings = {
+            "green": signal_controller.green_time,
+            "red": signal_controller.red_time,
+            "yellow": signal_controller.yellow_time
+        }
+        
         # Encode result back to base64 for preview
         _, buffer = cv2.imencode('.jpg', processed_img)
         processed_base64 = base64.b64encode(buffer).decode('utf-8')
@@ -82,7 +101,8 @@ async def detect_upload(file: UploadFile = File(...)):
         return {
             "image": f"data:image/jpeg;base64,{processed_base64}",
             "count": count,
-            "filename": file.filename
+            "filename": file.filename,
+            "timings": timings
         }
     except Exception as e:
         return {"error": str(e)}
