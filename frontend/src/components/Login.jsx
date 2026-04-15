@@ -14,17 +14,21 @@ const Login = ({ onSuccess, onFailure }) => {
           className="branding-container"
         >
           <div className="logo-group">
-            <Activity color="#38bdf8" size={64} />
-            <h1>AI TRAFFIC</h1>
+            <Activity color="var(--accent-primary)" size={80} />
+            <h1 style={{ background: 'var(--accent-gradient)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontWeight: 900 }}>
+              AI TRAFFIC
+            </h1>
           </div>
-          <p className="tagline">Optimize cities with real-time AI intelligence.</p>
+          <p className="tagline" style={{ color: 'var(--text-secondary)', fontSize: '1.5rem' }}>
+            Next-gen urban mobility. Powered by real-time intelligence.
+          </p>
           <div className="platform-stats">
             <div className="stat-item">
-              <span>96.8%</span>
+              <span style={{ color: 'var(--accent-primary)' }}>96.8%</span>
               <label>Accuracy</label>
             </div>
             <div className="stat-item">
-              <span>120ms</span>
+              <span style={{ color: 'var(--accent-secondary)' }}>120ms</span>
               <label>Latency</label>
             </div>
           </div>
@@ -37,8 +41,8 @@ const Login = ({ onSuccess, onFailure }) => {
           animate={{ opacity: 1, x: 0 }}
           className="login-card"
         >
-          <h2>Welcome Back</h2>
-          <p className="subtitle">Sign in to access your city command center</p>
+          <h2 style={{ color: '#fff', fontSize: '2.5rem', fontWeight: 800 }}>Welcome Back</h2>
+          <p className="subtitle" style={{ color: 'var(--text-secondary)' }}>Sign in to access your city command center</p>
           
           <div className="google-auth-container">
             <GoogleLogin

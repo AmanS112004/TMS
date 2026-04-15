@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
-import { Camera, Upload, MessageSquare, LogOut, Activity, Menu, X } from 'lucide-react'
+import { Camera, Upload, MessageSquare, LogOut, Activity, Menu, X, Gamepad2 } from 'lucide-react'
 
-const Navbar = ({ mode, setMode, onLogout, toggleChat, isChatOpen }) => {
+const Navbar = ({ mode, setMode, currentView, setCurrentView, onLogout, toggleChat, isChatOpen }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   const handleNavClick = (action) => {
@@ -12,8 +12,10 @@ const Navbar = ({ mode, setMode, onLogout, toggleChat, isChatOpen }) => {
   return (
     <nav className="top-navbar">
       <div className="nav-branding">
-        <Activity color="#38bdf8" size={24} />
-        <span>AI TRAFFIC</span>
+        <Activity color="var(--accent-primary)" size={24} />
+        <span style={{ fontWeight: 800, background: 'var(--accent-gradient)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          AI TRAFFIC
+        </span>
       </div>
       
       {/* Mobile Menu Toggle */}
@@ -26,19 +28,27 @@ const Navbar = ({ mode, setMode, onLogout, toggleChat, isChatOpen }) => {
 
       <div className={`nav-links ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
         <button 
-          className={`nav-btn ${mode === 'webcam' ? 'active' : ''}`}
-          onClick={() => handleNavClick(() => setMode('webcam'))}
+          className={`nav-btn ${currentView === 'dashboard' && mode === 'webcam' ? 'active' : ''}`}
+          onClick={() => handleNavClick(() => { setCurrentView('dashboard'); setMode('webcam'); })}
         >
           <Camera size={18} />
           <span>Live Detection</span>
         </button>
         
         <button 
-          className={`nav-btn ${mode === 'upload' ? 'active' : ''}`}
-          onClick={() => handleNavClick(() => setMode('upload'))}
+          className={`nav-btn ${currentView === 'dashboard' && mode === 'upload' ? 'active' : ''}`}
+          onClick={() => handleNavClick(() => { setCurrentView('dashboard'); setMode('upload'); })}
         >
           <Upload size={18} />
           <span>Static Analysis</span>
+        </button>
+
+        <button 
+          className={`nav-btn ${currentView === 'simulator' ? 'active' : ''}`}
+          onClick={() => handleNavClick(() => setCurrentView('simulator'))}
+        >
+          <Gamepad2 size={18} />
+          <span>Traffic Simulator</span>
         </button>
         
         <button 
@@ -58,10 +68,6 @@ const Navbar = ({ mode, setMode, onLogout, toggleChat, isChatOpen }) => {
       </div>
       
       <div className="nav-user desktop-only">
-        <button className="logout-btn" onClick={onLogout}>
-          <LogOut size={18} />
-          <span>Logout</span>
-        </button>
       </div>
     </nav>
   )

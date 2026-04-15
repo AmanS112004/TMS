@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import Webcam from 'react-webcam'
 import { motion } from 'framer-motion'
-import { Camera, Upload, Activity, AlertCircle, BarChart3, Clock, Volume2, Send, LogOut } from 'lucide-react'
+import { Camera, Upload, Activity, AlertCircle, BarChart3, Clock, Volume2, Send, LogOut, Square } from 'lucide-react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import Login from './components/Login'
 import Navbar from './components/Navbar'
+import Simulator from './components/Simulator'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8001'
 
@@ -16,6 +17,7 @@ function App() {
   const [timings, setTimings] = useState({ green: 30, red: 20, yellow: 5 })
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [currentView, setCurrentView] = useState('dashboard') // 'dashboard' or 'simulator'
   
   // Chat state
   const [isNarrating, setIsNarrating] = useState(false)
@@ -63,11 +65,15 @@ function App() {
   }
   const webcamRef = useRef(null)
   const fileInputRef = useRef(null)
-  const utteranceRef = useRef(null) // Prevent garbage collection
+  const utteranceRef = useRef(null)
+  const abortControllerRef = useRef(null)
 
   const handleNarrate = async () => {
     if (isNarrating) {
       window.speechSynthesis.cancel()
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
       setIsNarrating(false)
       return
     }
@@ -75,17 +81,22 @@ function App() {
     try {
       setIsNarrating(true)
       
+      // Cleanup previous request if any
+      if (abortControllerRef.current) abortControllerRef.current.abort()
+      abortControllerRef.current = new AbortController()
+
       const response = await fetch(`${API_BASE}/narrate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ count, timings }),
+        signal: abortControllerRef.current.signal
       })
       const data = await response.json()
       
-      if (data.narrative) {
+      if (data.narrative && !abortControllerRef.current.signal.aborted) {
         // Setup Speech
         const utterance = new SpeechSynthesisUtterance(data.narrative)
-        utteranceRef.current = utterance // Store in ref
+        utteranceRef.current = utterance
         
         utterance.onend = () => {
           setIsNarrating(false)
@@ -101,8 +112,11 @@ function App() {
         setIsNarrating(false)
       }
     } catch (error) {
+      if (error.name === 'AbortError') return
       console.error("Narration error:", error)
       setIsNarrating(false)
+    } finally {
+      abortControllerRef.current = null
     }
   }
 
@@ -248,6 +262,8 @@ function App() {
       <Navbar 
         mode={mode} 
         setMode={setMode} 
+        currentView={currentView}
+        setCurrentView={setCurrentView}
         onLogout={handleLogout}
         isChatOpen={isChatOpen}
         toggleChat={() => setIsChatOpen(!isChatOpen)}
@@ -255,168 +271,157 @@ function App() {
       
       <div className="app-container dashboard-layout">
         <main className="main-content">
-          <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <h1 style={{ fontSize: '2rem', fontWeight: 900 }}>City Command Center</h1>
-              <p style={{ color: 'var(--text-secondary)' }}>Operator: {user.name} | Active Portal</p>
-            </div>
-            <div className="card" style={{ padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#4ade80' }} />
-              <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>SYSTEM ONLINE</span>
-            </div>
-          </header>
+          {currentView === 'dashboard' ? (
+            <>
+              <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h1 style={{ fontSize: '2.5rem', fontWeight: 900, background: 'var(--accent-gradient)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                    City Command Center
+                  </h1>
+                  <p style={{ color: 'var(--text-secondary)', fontWeight: 500, letterSpacing: '0.05em' }}>
+                    Operator: {user.name} | Active Portal
+                  </p>
+                </div>
+                <div className="card" style={{ padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderRadius: '2rem' }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#4ade80', boxShadow: '0 0 8px #4ade80' }} />
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.1em' }}>CONTROL TERMINAL</span>
+                </div>
+              </header>
 
-        <div className="main-grid">
-          <div className="card" style={{ padding: 0, overflow: 'hidden', minHeight: '500px', display: 'flex', flexDirection: 'column' }}>
-            <div className="feed-container">
-              {mode === 'webcam' ? (
-                <>
-                  {/* Keep Webcam ALWAYS mounted so the capture loop never breaks */}
-                  <Webcam
-                    ref={webcamRef}
-                    screenshotFormat="image/jpeg"
-                    className="feed-canvas"
-                    style={{
-                      display: (isDetecting && processedImage) ? 'none' : 'block'
-                    }}
-                    videoConstraints={{ facingMode: "user" }}
-                  />
-
-                  {/* Show processed results as an overlay */}
-                  {isDetecting && processedImage && (
-                    <img src={processedImage} className="feed-canvas" alt="Processed stream" />
-                  )}
-
-                  <div style={{ position: 'absolute', bottom: '1.5rem', right: '1.5rem', zIndex: 10 }}>
-                    <button onClick={toggleDetection}>
-                      {isDetecting ? 'TERMINATE ANALYSIS' : 'INITIATE ANALYSIS'}
-                    </button>
+              <div className="main-grid">
+                <div className="card" style={{ padding: 0, overflow: 'hidden', minHeight: '500px', display: 'flex', flexDirection: 'column' }}>
+                  <div className="feed-container">
+                    {mode === 'webcam' ? (
+                      <>
+                        <Webcam
+                          ref={webcamRef}
+                          screenshotFormat="image/jpeg"
+                          className="feed-canvas"
+                          style={{
+                            display: (isDetecting && processedImage) ? 'none' : 'block'
+                          }}
+                          videoConstraints={{ facingMode: "user" }}
+                        />
+                        {isDetecting && processedImage && (
+                          <img src={processedImage} className="feed-canvas" alt="Processed stream" />
+                        )}
+                        <div style={{ position: 'absolute', bottom: '1.5rem', right: '1.5rem', zIndex: 10 }}>
+                          <button onClick={toggleDetection}>
+                            {isDetecting ? 'TERMINATE ANALYSIS' : 'INITIATE ANALYSIS'}
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <div
+                        className="upload-zone"
+                        onClick={() => fileInputRef.current?.click()}
+                        style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', margin: '1rem' }}
+                      >
+                        {processedImage ? (
+                          <img src={processedImage} className="feed-canvas" alt="Analysis Result" />
+                        ) : (
+                          <>
+                            <Upload size={48} color="var(--accent-primary)" />
+                            <h3 style={{ marginTop: '1.5rem', fontWeight: 800 }}>Import Traffic Image</h3>
+                            <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem' }}>Drag and drop or click to browse</p>
+                          </>
+                        )}
+                        <input
+                          type="file"
+                          ref={fileInputRef}
+                          style={{ display: 'none' }}
+                          onChange={handleFileUpload}
+                          accept="image/*"
+                        />
+                        {processedImage && (
+                          <button
+                            className="btn-secondary"
+                            style={{ position: 'absolute', bottom: '1.5rem' }}
+                            onClick={(e) => { e.stopPropagation(); resetAnalysis(); }}
+                          >
+                            CLEAR IMAGE
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
-                </>
-              ) : (
-                <div
-                  className="upload-zone"
-                  onClick={() => fileInputRef.current?.click()}
-                  style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', margin: '1rem' }}
-                >
-                  {processedImage ? (
-                    <img src={processedImage} className="feed-canvas" alt="Analysis Result" />
-                  ) : (
-                    <>
-                      <Upload size={48} color="var(--accent-cyan)" />
-                      <h3 style={{ marginTop: '1.5rem' }}>Import Traffic Image</h3>
-                      <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem' }}>Drag and drop or click to browse</p>
-                    </>
-                  )}
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    style={{ display: 'none' }}
-                    onChange={handleFileUpload}
-                    accept="image/*"
-                  />
-                  {processedImage && (
-                    <button
-                      className="btn-secondary"
-                      style={{ position: 'absolute', bottom: '1.5rem' }}
-                      onClick={(e) => { e.stopPropagation(); resetAnalysis(); }}
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                  <div className="stat-card" style={{ position: 'relative' }}>
+                    <span className="stat-label">Total Vehicles</span>
+                    <motion.span
+                      key={count}
+                      initial={{ scale: 1.5, color: '#fff' }}
+                      animate={{ scale: 1, color: 'var(--accent-cyan)' }}
+                      className="stat-value"
                     >
-                      CLEAR IMAGE
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
+                      {count}
+                    </motion.span>
+                    <BarChart3 size={32} color="rgba(249, 115, 22, 0.05)" style={{ position: 'absolute', top: 15, right: 15 }} />
+                  </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            <div className="stat-card" style={{ position: 'relative' }}>
-              <span className="stat-label">Total Vehicles</span>
-              <motion.span
-                key={count}
-                initial={{ scale: 1.5, color: '#fff' }}
-                animate={{ scale: 1, color: 'var(--accent-cyan)' }}
-                className="stat-value"
-              >
-                {count}
-              </motion.span>
-              <BarChart3 size={32} color="rgba(56, 189, 248, 0.05)" style={{ position: 'absolute', top: 15, right: 15 }} />
-            </div>
-
-            <div className="card">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                <h3 style={{ fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent-cyan)' }}>
-                  <Clock size={16} />
-                  AI SIGNAL TIMING
-                </h3>
-                <button 
-                  onClick={handleNarrate}
-                  className={`voice-btn ${isNarrating ? 'playing' : ''}`}
-                  title="Explain traffic status"
-                  style={{
-                    padding: '0.5rem',
-                    borderRadius: '50%',
-                    background: isNarrating ? 'var(--accent-cyan)' : 'rgba(255,255,255,0.05)',
-                    border: 'none',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease'
-                  }}
-                >
-                  <Volume2 size={18} color={isNarrating ? '#000' : 'var(--accent-cyan)'} />
-                </button>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>Green Signal</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <div style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: '#4ade80', boxShadow: '0 0 10px #4ade80' }} />
-                    <span style={{ fontWeight: 800, fontSize: '1.25rem' }}>{timings.green}s</span>
+                  <div className="card">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                      <h3 style={{ fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent-primary)', fontWeight: 800, letterSpacing: '0.1em' }}>
+                        <Clock size={16} />
+                        AI SIGNAL TIMING
+                      </h3>
+                      <button 
+                        onClick={handleNarrate}
+                        className={`voice-btn ${isNarrating ? 'playing' : ''}`}
+                        title="Explain traffic status"
+                        style={{
+                          padding: '0.5rem',
+                          borderRadius: '50%',
+                          background: isNarrating ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.03)',
+                          border: '1px solid var(--border-color)',
+                          cursor: 'pointer',
+                          transition: 'all 0.3s ease'
+                        }}
+                      >
+                        {isNarrating ? (
+                          <Square size={16} fill="#fff" color="#fff" />
+                        ) : (
+                          <Volume2 size={18} color="var(--accent-primary)" />
+                        )}
+                      </button>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ color: 'var(--text-secondary)' }}>Green Signal</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <div style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: '#4ade80', boxShadow: '0 0 10px #4ade80' }} />
+                          <span style={{ fontWeight: 800, fontSize: '1.25rem' }}>{timings.green}s</span>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ color: 'var(--text-secondary)' }}>Red Signal</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <div style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: '#f87171', boxShadow: '0 0 10px #f87171' }} />
+                          <span style={{ fontWeight: 800, fontSize: '1.25rem' }}>{timings.red}s</span>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ color: 'var(--text-secondary)' }}>Yellow Signal</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <div style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: '#fbbf24', boxShadow: '0 0 10px #fbbf24' }} />
+                          <span style={{ fontWeight: 800, fontSize: '1.25rem' }}>{timings.yellow}s</span>
+                        </div>
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem', padding: '0.75rem', backgroundColor: 'rgba(249, 115, 22, 0.03)', borderRadius: '0.75rem', border: '1px solid rgba(249, 115, 22, 0.1)', lineHeight: 1.6 }}>
+                        Signal times are dynamically optimized based on real-time vehicle density.
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>Red Signal</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <div style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: '#f87171', boxShadow: '0 0 10px #f87171' }} />
-                    <span style={{ fontWeight: 800, fontSize: '1.25rem' }}>{timings.red}s</span>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>Yellow Signal</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <div style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: '#fbbf24', boxShadow: '0 0 10px #fbbf24' }} />
-                    <span style={{ fontWeight: 800, fontSize: '1.25rem' }}>{timings.yellow}s</span>
-                  </div>
-                </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem', padding: '0.75rem', backgroundColor: 'rgba(56, 189, 248, 0.05)', borderRadius: '0.5rem', border: '1px solid rgba(56, 189, 248, 0.1)' }}>
-                  Signal times are dynamically optimized based on real-time vehicle density.
-                </div>
               </div>
-            </div>
-
-
-            {/* <div className="card">
-              <h3 style={{ fontSize: '0.875rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent-amber)' }}>
-                <AlertCircle size={16} />
-                LIVE ANALYTICS
-              </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>Model Conf.</span>
-                  <span style={{ fontWeight: 600 }}>96.8%</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>Classifiers</span>
-                  <span style={{ fontWeight: 600 }}>4 Active</span>
-                </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem', padding: '0.75rem', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '0.5rem' }}>
-                  System is actively scanning for Cars, Trucks, Buses, and Motorcycles.
-                </div>
-              </div>
-            </div> */}
-          </div>
-        </div>
-      </main>
-    </div>
+            </>
+          ) : (
+            <Simulator />
+          )}
+        </main>
+      </div>
 
       {/* Floating Chatbot Widget */}
       <div className={`chatbot-widget ${isChatOpen ? 'open' : ''}`}>
@@ -435,9 +440,9 @@ function App() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             className="chat-window card"
           >
-            <div className="chat-header">
-              <Activity size={18} color="var(--accent-cyan)" />
-              <span>Traffic Assistant</span>
+            <div className="chat-header" style={{ borderBottom: '1px solid var(--border-color)', background: 'rgba(249, 115, 22, 0.05)' }}>
+              <Activity size={18} color="var(--accent-primary)" />
+              <span style={{ fontWeight: 800, letterSpacing: '0.05em' }}>Traffic Assistant</span>
             </div>
             
             <div className="chat-messages">
