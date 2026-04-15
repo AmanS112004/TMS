@@ -56,9 +56,6 @@ groq_client = Groq(api_key=GROQ_KEY)
 genai.configure(api_key=GEMINI_KEY)
 gemini_model = genai.GenerativeModel("gemini-1.5-flash")
 
-@app.get("/")
-async def root():
-    return {"message": "AI Smart Traffic System API is running"}
 
 @app.post("/auth/google")
 async def google_auth(request: Request):
