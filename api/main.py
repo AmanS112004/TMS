@@ -27,9 +27,8 @@ except Exception as e:
 # Load environment variables
 load_dotenv()
 
-# Add parent directory to path so we can import vehicle_detection
-from .vehicle_detection import VehicleDetector
-from .signal_time import TrafficSignalController
+from vehicle_detection import VehicleDetector
+from signal_time import TrafficSignalController
 
 app = FastAPI(title="AI Smart Traffic API")
 
