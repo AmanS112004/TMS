@@ -280,12 +280,28 @@ async def detect_upload(file: UploadFile = File(...)):
 async def health():
     return {"status": "ok", "message": "AI Smart Traffic System API is running"}
 
-# Mount static files (built React app)
+# Serve frontend
 if os.path.exists("static"):
+    # Mount the assets directory specifically
+    assets_path = os.path.join("static", "assets")
+    if os.path.exists(assets_path):
+        app.mount("/assets", StaticFiles(directory=assets_path), name="assets")
+    
+    # Mount any other static folders if needed (like public files)
     app.mount("/static", StaticFiles(directory="static"), name="static")
+
+    @app.get("/")
+    async def serve_index():
+        return FileResponse("static/index.html")
 
     @app.get("/{rest_of_path:path}")
     async def serve_spa(request: Request, rest_of_path: str):
+        # If it's an API route that wasn't found, don't serve HTML
+        if rest_of_path.startswith("auth/") or rest_of_path.startswith("detect/"):
+            return {"error": "Not Found"}
         return FileResponse("static/index.html")
 else:
     print("WARNING: 'static' directory not found.")
+    @app.get("/")
+    async def root():
+        return {"message": "AI Smart Traffic System API is running (Frontend missing)"}
