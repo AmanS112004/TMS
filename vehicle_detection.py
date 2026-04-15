@@ -5,84 +5,66 @@ from ultralytics import YOLO
 class VehicleDetector:
     def __init__(self, model_path="yolov8n.pt"):
         """
-        Initialize the YOLOv8 model.
+        Initialize the YOLOv8 model for the web system.
         """
-        # Load the YOLOv8 Nano model (will download automatically if not found)
         self.model = YOLO(model_path)
-        # Relevant COCO classes for vehicle detection
-        # 2: car, 3: motorcycle, 5: bus, 7: truck
-        self.vehicle_classes = [2, 3, 5, 7]
+        self.vehicle_classes = ["car", "bus", "truck", "motorbike"]
 
-    def detect(self, source, confidence_threshold=0.5):
+    def detect(self, source):
         """
-        Perform detection on an image path or a numpy image array.
-        Returns the image with detections drawn and a count of vehicles.
+        The core logic from your snippet, adapted for the website.
         """
         if isinstance(source, str):
-            # Read the image from path
             img = cv2.imread(source)
-            if img is None:
-                print(f"Error: Could not read image at {source}")
-                return None, 0
+            if img is None: return None, 0
         else:
-            # Assume it's already a numpy array (OpenCV image)
             img = source.copy()
 
-        # Perform inference
-        results = self.model.predict(img, conf=confidence_threshold, verbose=False)
+        # Run YOLO Inference
+        results = self.model(img)
         
-        vehicle_count = 0
-        
-        # Iterate over detections in the first result
-        for result in results:
-            for box in result.boxes:
-                # Filter by vehicle classes
-                class_id = int(box.cls[0])
-                if class_id in self.vehicle_classes:
-                    vehicle_count += 1
-                    
-                    # Get box coordinates (x1, y1, x2, y2)
-                    x1, y1, x2, y2 = map(int, box.xyxy[0])
-                    conf = float(box.conf[0])
-                    label = result.names[class_id]
-                    
-                    # Draw rectangle and label
-                    cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
-                    cv2.putText(img, f"{label} {conf:.2f}", (x1, y1 - 10), 
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 0, 0), 2)
+        # Get annotated image (using the .plot() method for best visualization)
+        annotated_frame = results[0].plot()
 
-        return img, vehicle_count
+        # Count vehicles specifically using your classification list
+        count = 0
+        for box in results[0].boxes:
+            cls_id = int(box.cls[0])
+            label = self.model.names[cls_id]
+            if label in self.vehicle_classes:
+                count += 1
+
+        # Show Red count overlay on top of the annotated frame
+        cv2.putText(annotated_frame, f"Vehicles: {count}", (20, 40),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+
+        return annotated_frame, count
 
 def main():
-    # Initialize the detector
+    """
+    STANDALONE TEST LOOP
+    This section only runs when you execute 'python vehicle_detection.py'.
+    It will NOT run (and thus will not crash) when the web server starts.
+    """
     detector = VehicleDetector()
-    
-    # Path to the directory containing the images
     image_dir = "test_images/"
     output_dir = "output_images/"
     os.makedirs(output_dir, exist_ok=True)
 
-    # Process each image (1.jpg to 4.jpg)
-    for i in range(1, 5):
-        image_name = f"{i}.jpg"
-        image_path = os.path.join(image_dir, image_name)
-        
-        print(f"Processing {image_path}...")
-        processed_img, count = detector.detect(image_path)
-        
-        if processed_img is not None:
-            # Display vehicle count
-            print(f"Detected {count} vehicles in {image_name}")
-            
-            # Save the result
-            output_path = os.path.join(output_dir, f"output_{image_name}")
-            cv2.imwrite(output_path, processed_img)
-            
-            # Optionally show the result
-            # cv2.imshow("Vehicle Detection", processed_img)
-            # cv2.waitKey(500) # Show for half a second
+    print("Running standalone detection test on images...")
 
-    print("Processing complete.")
+    for i in range(1, 4):
+        image_path = os.path.join(image_dir, f"{i}.jpg")
+        if not os.path.exists(image_path):
+            print(f"File not found: {image_path}")
+            continue
+
+        processed_img, count = detector.detect(image_path)
+        print(f"Processed {image_path}: {count} vehicles detected.")
+        
+        cv2.imshow("Detection Preview", processed_img)
+        cv2.waitKey(1000) # Show for 1 second
+
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
