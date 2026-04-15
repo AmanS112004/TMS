@@ -12,8 +12,14 @@ jobs:
         with:
           fetch-depth: 0
           lfs: true
+      - name: Check for HF_TOKEN
+        run: |
+          if [ -z "${{ secrets.HF_TOKEN }}" ]; then
+            echo "Error: HF_TOKEN secret is missing or empty!"
+            exit 1
+          fi
       - name: Push to hub
-        uses: huggingface/hub-sync@v1
+        uses: huggingface/hub-sync@main
         with:
           github_repo_id: AmanS112004/TMS
           huggingface_repo_id: astein11004/TMS
