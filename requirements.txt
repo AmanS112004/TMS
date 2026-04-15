@@ -1,0 +1,7 @@
+ultralytics==8.4.37
+opencv-python
+numpy
+pygame
+fastapi
+uvicorn
+python-multipart

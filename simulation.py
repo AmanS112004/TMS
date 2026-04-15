@@ -10,18 +10,12 @@ import random
 import math
 import time
 import threading
-# from vehicle_detection import detection
+from vehicle_detection import VehicleDetector
 import pygame
 import sys
 import os
 
-# options={
-#    'model':'./cfg/yolo.cfg',     #specifying the path of model
-#    'load':'./bin/yolov2.weights',   #weights
-#    'threshold':0.3     #minimum confidence factor to create a box, greater than 0.3 good
-# }
-
-# tfnet=TFNet(options)    #READ ABOUT TFNET
+detector = VehicleDetector()
 
 # Default values of signal times
 defaultRed = 150
@@ -280,8 +274,7 @@ def initialize():
 def setTime():
     global noOfCars, noOfBikes, noOfBuses, noOfTrucks, noOfRickshaws, noOfLanes
     global carTime, busTime, truckTime, rickshawTime, bikeTime
-    os.system("say detecting vehicles, "+directionNumbers[(currentGreen+1)%noOfSignals])
-#    detection_result=detection(currentGreen,tfnet)
+#    processed_img, vehicle_count = detector.detect('frame.jpg') # Example usage
 #    greenTime = math.ceil(((noOfCars*carTime) + (noOfRickshaws*rickshawTime) + (noOfBuses*busTime) + (noOfBikes*bikeTime))/(noOfLanes+1))
 #    if(greenTime<defaultMinimum):
 #       greenTime = defaultMinimum
