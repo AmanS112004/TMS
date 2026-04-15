@@ -5,6 +5,8 @@ import cv2
 import numpy as np
 from fastapi import FastAPI, Form, UploadFile, File, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from typing import List
 import os
 from dotenv import load_dotenv
@@ -26,9 +28,8 @@ except Exception as e:
 load_dotenv()
 
 # Add parent directory to path so we can import vehicle_detection
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from vehicle_detection import VehicleDetector
-from signal_time import TrafficSignalController
+from .vehicle_detection import VehicleDetector
+from .signal_time import TrafficSignalController
 
 app = FastAPI(title="AI Smart Traffic API")
 
@@ -276,6 +277,16 @@ async def detect_upload(file: UploadFile = File(...)):
     except Exception as e:
         return {"error": str(e)}
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+@app.get("/health")
+async def health():
+    return {"status": "ok", "message": "AI Smart Traffic System API is running"}
+
+# Mount static files (built React app)
+if os.path.exists("static"):
+    app.mount("/static", StaticFiles(directory="static"), name="static")
+
+    @app.get("/{rest_of_path:path}")
+    async def serve_spa(request: Request, rest_of_path: str):
+        return FileResponse("static/index.html")
+else:
+    print("WARNING: 'static' directory not found.")
