@@ -47,7 +47,7 @@ signal_controller = TrafficSignalController()
 # AI Clients Initialization
 GROQ_KEY = os.getenv("GROQ_API_KEY")
 GEMINI_KEY = os.getenv("GEMINI_API_KEY")
-GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID") or "1043940495048-f5m5fviaivrdob4pdu0oe169fu81ivbe.apps.googleusercontent.com"
 
 if not GROQ_KEY or not GEMINI_KEY:
     print("WARNING: API keys not found in environment variables!")

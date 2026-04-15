@@ -3,6 +3,8 @@ import { GoogleLogin } from '@react-oauth/google'
 import { motion } from 'framer-motion'
 import { Activity } from 'lucide-react'
 
+const GOOGLE_CLIENT_ID = "1043940495048-f5m5fviaivrdob4pdu0oe169fu81ivbe.apps.googleusercontent.com";
+
 const Login = ({ onSuccess, onFailure }) => {
   return (
     <div className="login-page">
@@ -48,6 +50,7 @@ const Login = ({ onSuccess, onFailure }) => {
             <GoogleLogin
               onSuccess={onSuccess}
               onError={onFailure}
+              clientId={GOOGLE_CLIENT_ID}
               useOneTap
               theme="outline"
               size="large"
