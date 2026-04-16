@@ -41,6 +41,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Middleware for Security Headers (Required for Google Auth Popups)
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups"
+    return response
+
 detector = VehicleDetector()
 signal_controller = TrafficSignalController()
 

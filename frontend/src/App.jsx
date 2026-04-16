@@ -7,7 +7,7 @@ import Login from './components/Login'
 import Navbar from './components/Navbar'
 import Simulator from './components/Simulator'
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8001'
+const API_BASE = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:8001' : '')
 
 function App() {
   const [mode, setMode] = useState('webcam') // 'webcam' or 'upload'
