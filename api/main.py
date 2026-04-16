@@ -27,8 +27,8 @@ except Exception as e:
 # Load environment variables
 load_dotenv()
 
-from vehicle_detection import VehicleDetector
-from signal_time import TrafficSignalController
+from api.vehicle_detection import VehicleDetector
+from api.signal_time import TrafficSignalController
 
 app = FastAPI(title="AI Smart Traffic API")
 

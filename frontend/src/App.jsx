@@ -282,10 +282,6 @@ function App() {
                     Operator: {user.name} | Active Portal
                   </p>
                 </div>
-                <div className="card" style={{ padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderRadius: '2rem' }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#4ade80', boxShadow: '0 0 8px #4ade80' }} />
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.1em' }}>CONTROL TERMINAL</span>
-                </div>
               </header>
 
               <div className="main-grid">
@@ -408,9 +404,6 @@ function App() {
                           <div style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: '#fbbf24', boxShadow: '0 0 10px #fbbf24' }} />
                           <span style={{ fontWeight: 800, fontSize: '1.25rem' }}>{timings.yellow}s</span>
                         </div>
-                      </div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem', padding: '0.75rem', backgroundColor: 'rgba(249, 115, 22, 0.03)', borderRadius: '0.75rem', border: '1px solid rgba(249, 115, 22, 0.1)', lineHeight: 1.6 }}>
-                        Signal times are dynamically optimized based on real-time vehicle density.
                       </div>
                     </div>
                   </div>
