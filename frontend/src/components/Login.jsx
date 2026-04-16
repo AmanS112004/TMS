@@ -18,22 +18,12 @@ const Login = ({ onSuccess, onFailure }) => {
           <div className="logo-group">
             <Activity color="var(--accent-primary)" size={80} />
             <h1 style={{ background: 'var(--accent-gradient)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontWeight: 900 }}>
-              AI TRAFFIC
+              GoSignal
             </h1>
           </div>
           <p className="tagline" style={{ color: 'var(--text-secondary)', fontSize: '1.5rem' }}>
             Next-gen urban mobility. Powered by real-time intelligence.
           </p>
-          <div className="platform-stats">
-            <div className="stat-item">
-              <span style={{ color: 'var(--accent-primary)' }}>96.8%</span>
-              <label>Accuracy</label>
-            </div>
-            <div className="stat-item">
-              <span style={{ color: 'var(--accent-secondary)' }}>120ms</span>
-              <label>Latency</label>
-            </div>
-          </div>
         </motion.div>
       </div>
       
