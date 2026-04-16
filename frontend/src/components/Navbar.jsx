@@ -43,13 +43,13 @@ const Navbar = ({ mode, setMode, currentView, setCurrentView, onLogout, toggleCh
           <span>Static Analysis</span>
         </button>
 
-        <button 
+        {/* <button 
           className={`nav-btn ${currentView === 'simulator' ? 'active' : ''}`}
           onClick={() => handleNavClick(() => setCurrentView('simulator'))}
         >
           <Gamepad2 size={18} />
           <span>Traffic Simulator</span>
-        </button>
+        </button> */}
         
         <button 
           className={`nav-btn ${isChatOpen ? 'active' : ''}`}

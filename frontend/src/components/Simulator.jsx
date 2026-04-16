@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 
 // --- SIMULATION CONSTANTS ---
 const CANVAS_WIDTH = 1400
-const CANVAS_HEIGHT = 922
+const CANVAS_HEIGHT = 800
 const speeds = { car: 2.25, bus: 1.8, truck: 1.8, rickshaw: 2, bike: 2.5 }
 const stopLines = { right: 590, down: 330, left: 800, up: 535 }
 const defaultStop = { right: 580, down: 320, left: 810, up: 545 }
@@ -20,10 +20,24 @@ const vehicleTypes = { 0: 'car', 1: 'bus', 2: 'truck', 3: 'rickshaw', 4: 'bike' 
 
 // Base start positions (will be cloned for each simulation instance)
 const baseStartX = { right: [0, 0, 0], down: [755, 727, 697], left: [1400, 1400, 1400], up: [602, 627, 657] }
-const baseStartY = { right: [348, 370, 398], down: [0, 0, 0], left: [498, 466, 436], up: [922, 922, 922] }
+const baseStartY = { right: [348, 370, 398], down: [0, 0, 0], left: [498, 466, 436], up: [800, 800, 800] }
 
 const signalCoods = [[530, 230], [810, 230], [810, 570], [530, 570]]
 const signalTimerCoods = [[530, 210], [810, 210], [810, 550], [530, 550]]
+const vehicleCountCoods = [[480, 210], [880, 210], [880, 550], [480, 550]]
+
+const defaultRed = 150
+const defaultYellow = 5
+const defaultGreen = 20
+const defaultMinimum = 10
+const defaultMaximum = 60
+const detectionTime = 5
+
+const carTime = 2
+const bikeTime = 1
+const rickshawTime = 2.25
+const busTime = 2.5
+const truckTime = 2.5
 
 class TrafficSignal {
   constructor(red, yellow, green) {
@@ -171,7 +185,10 @@ const Simulator = () => {
     spawnPoints: {
       x: JSON.parse(JSON.stringify(baseStartX)),
       y: JSON.parse(JSON.stringify(baseStartY))
-    }
+    },
+    timeElapsed: 0,
+    sessionActive: true,
+    showStats: false
   })
 
   useEffect(() => {
@@ -198,41 +215,97 @@ const Simulator = () => {
 
     loadAssets()
 
-    stateRef.current.signals = [
-      new TrafficSignal(0, 5, 20),
-      new TrafficSignal(25, 5, 20),
-      new TrafficSignal(150, 5, 20),
-      new TrafficSignal(150, 5, 20)
-    ]
+    const ts1 = new TrafficSignal(0, defaultYellow, defaultGreen)
+    const ts2 = new TrafficSignal(ts1.red + ts1.yellow + ts1.green, defaultYellow, defaultGreen)
+    const ts3 = new TrafficSignal(defaultRed, defaultYellow, defaultGreen)
+    const ts4 = new TrafficSignal(defaultRed, defaultYellow, defaultGreen)
+    
+    stateRef.current.signals = [ts1, ts2, ts3, ts4]
+
+    const setTime = () => {
+      const s = stateRef.current
+      const nextIdx = s.nextGreen
+      const dir = directionNumbers[nextIdx]
+      
+      let cars = 0, bikes = 0, buses = 0, trucks = 0, rickshaws = 0
+      
+      for (let i = 0; i < 3; i++) {
+        s.vehiclesByDirection[dir][i].forEach(v => {
+          if (v.crossed === 0) {
+            if (v.vehicleClass === 'car') cars++
+            else if (v.vehicleClass === 'bike') bikes++
+            else if (v.vehicleClass === 'bus') buses++
+            else if (v.vehicleClass === 'truck') trucks++
+            else if (v.vehicleClass === 'rickshaw') rickshaws++
+          }
+        })
+      }
+
+      let greenTime = Math.ceil(((cars * carTime) + (rickshaws * rickshawTime) + (buses * busTime) + (trucks * truckTime) + (bikes * bikeTime)) / 3)
+      if (greenTime < defaultMinimum) greenTime = defaultMinimum
+      else if (greenTime > defaultMaximum) greenTime = defaultMaximum
+      
+      console.log(`Setting Next Green (${dir}) to ${greenTime}s`)
+      s.signals[nextIdx].green = greenTime
+    }
 
     const timer = setInterval(() => {
       const s = stateRef.current
+      if (!s.sessionActive) return
+      
+      s.timeElapsed++
+      if (s.timeElapsed >= 300) {
+        s.sessionActive = false
+        s.showStats = true
+        clearInterval(timer)
+        return
+      }
+
       const sig = s.signals[s.currentGreen]
+      
       if (s.currentYellow === 0) {
         sig.green--
+        if (s.signals[s.nextGreen].red === detectionTime) {
+          setTime()
+        }
         if (sig.green <= 0) s.currentYellow = 1
       } else {
         sig.yellow--
         if (sig.yellow <= 0) {
           s.currentYellow = 0
-          sig.green = 20; sig.yellow = 5; sig.red = 150
+          sig.green = defaultGreen
+          sig.yellow = defaultYellow
+          sig.red = defaultRed
           s.currentGreen = s.nextGreen
           s.nextGreen = (s.currentGreen + 1) % 4
+          const curr = s.signals[s.currentGreen]
+          s.signals[s.nextGreen].red = curr.yellow + curr.green
         }
       }
-      s.signals.forEach((sig, i) => { if (i !== s.currentGreen) sig.red-- })
+      s.signals.forEach((sig, i) => { 
+        if (i !== s.currentGreen) sig.red-- 
+      })
     }, 1000)
 
     const spawner = setInterval(() => {
       if (!isLoaded) return
       const s = stateRef.current
+      if (!s.sessionActive) return
+
       const typeNum = Math.floor(Math.random() * 5)
       const lane = typeNum === 4 ? 0 : Math.floor(Math.random() * 2) + 1
-      const dirNum = Math.floor(Math.random() * 4)
+      
+      const prob = Math.random() * 1000
+      let dirNum = 0
+      if (prob < 400) dirNum = 0      // Right: 40%
+      else if (prob < 800) dirNum = 1 // Down: 40%
+      else if (prob < 900) dirNum = 2 // Left: 10%
+      else dirNum = 3                 // Up: 10%
+
       const dir = directionNumbers[dirNum]
       const type = vehicleTypes[typeNum]
       s.allVehicles.push(new Vehicle(lane, type, dirNum, dir, imagesRef.current[dir][type], s))
-    }, 800)
+    }, 750)
 
     return () => { clearInterval(timer); clearInterval(spawner) }
   }, [isLoaded])
@@ -257,6 +330,12 @@ const Simulator = () => {
         ctx.drawImage(img, signalCoods[i][0], signalCoods[i][1])
         ctx.fillStyle = 'white'; ctx.font = 'bold 20px monospace'
         ctx.fillText(text > 0 ? text : (text <= -10 ? "---" : "GO"), signalTimerCoods[i][0], signalTimerCoods[i][1])
+
+        // Draw active vehicle count (CROSSED vehicles - matching simulation.py line 493)
+        const crossedCount = s.vehiclesByDirection[directionNumbers[i]].crossed
+        ctx.fillStyle = 'white'; ctx.fillRect(vehicleCountCoods[i][0], vehicleCountCoods[i][1] - 20, 40, 25)
+        ctx.fillStyle = 'black'; ctx.font = 'bold 18px Arial'
+        ctx.fillText(crossedCount, vehicleCountCoods[i][0] + 5, vehicleCountCoods[i][1])
       })
 
       s.allVehicles.forEach(v => { v.move(s); v.draw(ctx) })
@@ -318,18 +397,40 @@ const Simulator = () => {
           }} />
       </div>
 
-      <div style={{ marginTop: '1.5rem', display: 'flex', gap: '1.5rem', width: '100%', maxWidth: '1600px' }}>
-         <div className="card" style={{ padding: '1.5rem', minWidth: '200px' }}>
-            <h4 style={{ color: '#999', fontSize: '0.75rem', fontWeight: 800, marginBottom: '1rem', textTransform: 'uppercase' }}>Frame Rate</h4>
-            <span style={{ fontSize: '1.5rem', fontWeight: 900, color: '#f97316' }}>60.0 FPS</span>
-         </div>
-         <div className="card" style={{ padding: '1.5rem', minWidth: '200px' }}>
-            <h4 style={{ color: '#999', fontSize: '0.75rem', fontWeight: 800, marginBottom: '1rem', textTransform: 'uppercase' }}>Active Sprites</h4>
-            <span style={{ fontSize: '1.5rem', fontWeight: 900, color: '#fb7185' }}>DYNAMIC</span>
-         </div>
-      </div>
+      {stateRef.current.showStats && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(10px)' }}>
+          <div className="card" style={{ padding: '3rem', maxWidth: '600px', width: '90%', textAlign: 'center', border: '1px solid var(--accent-primary)' }}>
+            <h2 style={{ fontSize: '2.5rem', fontWeight: 900, color: '#f97316', marginBottom: '1rem' }}>SIMULATION COMPLETE</h2>
+            <p style={{ color: '#999', marginBottom: '2rem' }}>300 Second Analysis Concluded</p>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', textAlign: 'left', marginBottom: '2.5rem' }}>
+              {Object.keys(stateRef.current.vehiclesByDirection).map(dir => (
+                <div key={dir} style={{ background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '0.75rem' }}>
+                  <label style={{ color: '#666', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{dir} Lane</label>
+                  <div style={{ color: '#fff', fontSize: '1.5rem', fontWeight: 800 }}>{stateRef.current.vehiclesByDirection[dir].crossed} Passed</div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ background: 'var(--accent-gradient)', padding: '1.5rem', borderRadius: '1rem', marginBottom: '2.5rem' }}>
+              <h3 style={{ color: '#fff', fontSize: '2rem', fontWeight: 900 }}>
+                {Object.values(stateRef.current.vehiclesByDirection).reduce((acc, curr) => acc + (curr.crossed || 0), 0)}
+              </h3>
+              <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.875rem' }}>Total Vehicles Processed</p>
+            </div>
+
+            <button 
+              onClick={() => window.location.reload()}
+              style={{ padding: '1rem 2.5rem', borderRadius: '2rem', background: '#fff', color: '#000', fontWeight: 800, cursor: 'pointer', border: 'none' }}
+            >
+              RESTART SIMULATION
+            </button>
+          </div>
+        </div>
+      )}
 
       <style dangerouslySetInnerHTML={{ __html: `
+        :root { --accent-primary: #f97316; --accent-gradient: linear-gradient(135deg, #f97316 0%, #fb7185 100%); }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         .card { background: rgba(255, 255, 255, 0.02); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 1rem; }
       ` }} />
