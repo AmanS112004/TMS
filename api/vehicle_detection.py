@@ -3,10 +3,15 @@ import os
 from ultralytics import YOLO
 
 class VehicleDetector:
-    def __init__(self, model_path="yolov8n.pt"):
+    def __init__(self, model_path=None):
         """
         Initialize the YOLOv8 model for the web system.
         """
+        if model_path is None:
+            # default to yolov8n.pt in the same directory as this script
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            model_path = os.path.join(current_dir, "yolov8n.pt")
+            
         self.model = YOLO(model_path)
         self.vehicle_classes = ["car", "bus", "truck", "motorbike"]
 

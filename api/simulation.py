@@ -15,6 +15,14 @@ import pygame
 import sys
 import os
 
+# dynamic path resolution
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
+
+# ensure local modules in api/ can be imported even if run from project root
+if SCRIPT_DIR not in sys.path:
+    sys.path.append(SCRIPT_DIR)
+
 detector = VehicleDetector()
 
 # Default values of signal times
@@ -109,7 +117,7 @@ class Vehicle(pygame.sprite.Sprite):
         vehicles[direction][lane].append(self)
         # self.stop = stops[direction][lane]
         self.index = len(vehicles[direction][lane]) - 1
-        path = "images/" + direction + "/" + vehicleClass + ".png"
+        path = os.path.join(PROJECT_ROOT, "images", direction, vehicleClass + ".png")
         self.originalImage = pygame.image.load(path)
         self.currentImage = pygame.image.load(path)
 
@@ -438,15 +446,15 @@ class Main:
     screenSize = (screenWidth, screenHeight)
 
     # Setting background image i.e. image of intersection
-    background = pygame.image.load('images/mod_int.png')
+    background = pygame.image.load(os.path.join(PROJECT_ROOT, 'images', 'mod_int.png'))
 
     screen = pygame.display.set_mode(screenSize)
     pygame.display.set_caption("SIMULATION")
 
     # Loading signal images and font
-    redSignal = pygame.image.load('images/signals/red.png')
-    yellowSignal = pygame.image.load('images/signals/yellow.png')
-    greenSignal = pygame.image.load('images/signals/green.png')
+    redSignal = pygame.image.load(os.path.join(PROJECT_ROOT, 'images', 'signals', 'red.png'))
+    yellowSignal = pygame.image.load(os.path.join(PROJECT_ROOT, 'images', 'signals', 'yellow.png'))
+    greenSignal = pygame.image.load(os.path.join(PROJECT_ROOT, 'images', 'signals', 'green.png'))
     font = pygame.font.Font(None, 30)
 
     thread3 = threading.Thread(name="generateVehicles",target=generateVehicles, args=())    # Generating vehicles
