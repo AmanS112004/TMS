@@ -154,24 +154,17 @@ async def chat_with_traffic_ai(request: Request):
         
         tokens = word_tokenize(query)
         
-        # Consistent Traffic Level Logic
         level = "LOW" if vc < 20 else "HIGH"
         
-        # 1. SMART INTENT DETECTION (Based on user-provided snippet)
-        
-        # Vehicle Count
         if any(word in tokens for word in ["vehicle", "cars", "count", "many"]):
             return {"response": f"There are currently {vc} vehicles detected."}
 
-        # Traffic Situation
         elif any(word in tokens for word in ["traffic", "busy", "congestion", "jam"]):
             return {"response": f"Traffic flow is currently {level}. The AI detector sees {vc} vehicles."}
 
-        # Signal Timings (Consistent with signal_time.py formulas)
         elif any(word in tokens for word in ["signal", "time", "green", "red"]):
             return {"response": f"The signal is currently optimized: Green for {timings.get('green')}s, Red for {timings.get('red')}s. This is calculated as a base 10s plus 2s per vehicle."}
 
-        # Suggestions/Optimization
         elif any(word in tokens for word in ["suggest", "improve", "optimize", "better"]):
             if vc > 40:
                 return {"response": "Traffic is heavy. I have already increased the green signal duration to clear the queue faster."}
@@ -180,11 +173,9 @@ async def chat_with_traffic_ai(request: Request):
             else:
                 return {"response": "Traffic is moderate. Current timing is optimal for the current vehicle flow."}
 
-        # Status Overview
         elif any(word in tokens for word in ["status", "situation", "overview", "update"]):
             return {"response": f"Current Status: {level} traffic density with {vc} vehicles. Signal timing: {timings.get('green')}s Green / {timings.get('red')}s Red."}
 
-        # 2. AI FALLBACK (Using keys for complex queries)
         else:
             prompt = (
                 "You are the AI Traffic Controller Chatbot. Answer the following user question about this intersection.\n"

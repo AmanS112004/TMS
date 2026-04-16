@@ -7,19 +7,18 @@ import Login from './components/Login'
 import Navbar from './components/Navbar'
 import Simulator from './components/Simulator'
 
-const API_BASE = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:8001' : '')
+const API_BASE = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:8000' : '')
 
 function App() {
-  const [mode, setMode] = useState('webcam') // 'webcam' or 'upload'
+  const [mode, setMode] = useState('webcam') 
   const [isDetecting, setIsDetecting] = useState(false)
   const [processedImage, setProcessedImage] = useState(null)
   const [count, setCount] = useState(0)
   const [timings, setTimings] = useState({ green: 30, red: 20, yellow: 5 })
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [currentView, setCurrentView] = useState('dashboard') // 'dashboard' or 'simulator'
+  const [currentView, setCurrentView] = useState('dashboard')
   
-  // Chat state
   const [isNarrating, setIsNarrating] = useState(false)
   const [chatMessages, setChatMessages] = useState([
     { role: 'assistant', content: 'Hello! I am your AI Traffic Assistant. How can I help you today?' }
@@ -28,7 +27,6 @@ function App() {
   const [chatInput, setChatInput] = useState('')
   const [isChatLoading, setIsChatLoading] = useState(false)
 
-  // Auth check on mount
   useEffect(() => {
     const savedUser = localStorage.getItem('traffic_user')
     if (savedUser) {
@@ -279,12 +277,8 @@ function App() {
                     City Command Center
                   </h1>
                   <p style={{ color: 'var(--text-secondary)', fontWeight: 500, letterSpacing: '0.05em' }}>
-                    Operator: {user.name} | Active Portal
+                    Operator: Welcome, {user.name}
                   </p>
-                </div>
-                <div className="card" style={{ padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderRadius: '2rem' }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#4ade80', boxShadow: '0 0 8px #4ade80' }} />
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.1em' }}>CONTROL TERMINAL</span>
                 </div>
               </header>
 
