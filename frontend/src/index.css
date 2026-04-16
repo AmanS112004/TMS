@@ -271,7 +271,7 @@
     border-top: 1px solid var(--border-color);
     margin: 1rem 0;
   }
-  
+
   .nav-links .logout-btn {
     width: 100%;
     padding: 1.25rem;
@@ -602,56 +602,88 @@ button:active {
   line-height: 0;
 }
 
-.typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
-.typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+.typing-indicator span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-indicator span:nth-child(3) {
+  animation-delay: 0.4s;
+}
 
 @keyframes blink {
-  0% { opacity: 0.2; }
-  20% { opacity: 1; }
-  100% { opacity: 0.2; }
+  0% {
+    opacity: 0.2;
+  }
+
+  20% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0.2;
+  }
 }
 
 /* Responsiveness Media Queries */
 
 @media (max-width: 1024px) {
-  .logo-group h1 { font-size: 2.5rem; }
-  .login-left, .login-right { padding: 2rem; }
+  .logo-group h1 {
+    font-size: 2.5rem;
+  }
+
+  .login-left,
+  .login-right {
+    padding: 2rem;
+  }
 }
 
 @media (max-width: 768px) {
-  body, .app-main {
+
+  body,
+  .app-main {
     overflow-y: auto;
     height: auto;
   }
-  
-  .dashboard-layout { height: auto; }
+
+  .dashboard-layout {
+    height: auto;
+  }
 
   .login-page {
     flex-direction: column;
     height: auto;
     overflow-y: auto;
   }
-  
+
   .login-left {
     padding: 3rem 1.5rem;
   }
-  
+
   .login-right {
     background-color: var(--bg-color);
     padding: 2rem 1rem;
   }
-  
+
   .login-card {
     background-color: var(--panel-color);
     box-shadow: none;
     border: 1px solid var(--border-color);
   }
-  
-  .login-card h2 { color: #fff; }
-  .login-card .subtitle { color: var(--text-secondary); }
 
-  .nav-links { display: none; } /* Hidden on mobile by default, handled by mobile menu logic */
-  
+  .login-card h2 {
+    color: #fff;
+  }
+
+  .login-card .subtitle {
+    color: var(--text-secondary);
+  }
+
+  .nav-links {
+    display: none;
+  }
+
+  /* Hidden on mobile by default, handled by mobile menu logic */
+
   .main-content h1 {
     font-size: 1.5rem !important;
   }
@@ -666,7 +698,7 @@ button:active {
     grid-template-columns: 1fr !important;
     gap: 1rem !important;
   }
-  
+
   .stats-grid {
     grid-template-columns: 1fr;
     gap: 1rem;

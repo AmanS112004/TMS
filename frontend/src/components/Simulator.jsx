@@ -68,27 +68,27 @@ class Vehicle {
     this.index = state.vehiclesByDirection[direction][lane].length - 1
 
     const temp = (this.direction === 'right' || this.direction === 'left') ? this.width + gap : this.height + gap
-    
+
     // Update spawn points for next vehicle in this lane
     if (this.direction === 'right') {
       state.spawnPoints.x[this.direction][this.lane] -= temp
-      this.stop = (this.index > 0 && state.vehiclesByDirection[this.direction][this.lane][this.index - 1].crossed === 0) 
-        ? state.vehiclesByDirection[this.direction][this.lane][this.index - 1].stop - temp 
+      this.stop = (this.index > 0 && state.vehiclesByDirection[this.direction][this.lane][this.index - 1].crossed === 0)
+        ? state.vehiclesByDirection[this.direction][this.lane][this.index - 1].stop - temp
         : defaultStop[this.direction]
     } else if (this.direction === 'left') {
       state.spawnPoints.x[this.direction][this.lane] += temp
-      this.stop = (this.index > 0 && state.vehiclesByDirection[this.direction][this.lane][this.index - 1].crossed === 0) 
-        ? state.vehiclesByDirection[this.direction][this.lane][this.index - 1].stop + temp 
+      this.stop = (this.index > 0 && state.vehiclesByDirection[this.direction][this.lane][this.index - 1].crossed === 0)
+        ? state.vehiclesByDirection[this.direction][this.lane][this.index - 1].stop + temp
         : defaultStop[this.direction]
     } else if (this.direction === 'down') {
       state.spawnPoints.y[this.direction][this.lane] -= temp
-      this.stop = (this.index > 0 && state.vehiclesByDirection[this.direction][this.lane][this.index - 1].crossed === 0) 
-        ? state.vehiclesByDirection[this.direction][this.lane][this.index - 1].stop - temp 
+      this.stop = (this.index > 0 && state.vehiclesByDirection[this.direction][this.lane][this.index - 1].crossed === 0)
+        ? state.vehiclesByDirection[this.direction][this.lane][this.index - 1].stop - temp
         : defaultStop[this.direction]
     } else if (this.direction === 'up') {
       state.spawnPoints.y[this.direction][this.lane] += temp
-      this.stop = (this.index > 0 && state.vehiclesByDirection[this.direction][this.lane][this.index - 1].crossed === 0) 
-        ? state.vehiclesByDirection[this.direction][this.lane][this.index - 1].stop + temp 
+      this.stop = (this.index > 0 && state.vehiclesByDirection[this.direction][this.lane][this.index - 1].crossed === 0)
+        ? state.vehiclesByDirection[this.direction][this.lane][this.index - 1].stop + temp
         : defaultStop[this.direction]
     }
   }
@@ -99,7 +99,7 @@ class Vehicle {
 
     const checkAhead = (dim, currentPos, targetStop, aheadVehPos, aheadVehWidth, isVertical = false) => {
       const isLeading = this.index === 0
-      const hasGap = isLeading || (isVertical 
+      const hasGap = isLeading || (isVertical
         ? (this.direction === 'down' ? currentPos + this.height < aheadVehPos - gap2 : currentPos > aheadVehPos + aheadVehWidth + gap2)
         : (this.direction === 'right' ? currentPos + this.width < aheadVehPos - gap2 : currentPos > aheadVehPos + aheadVehWidth + gap2)
       )
@@ -219,16 +219,16 @@ const Simulator = () => {
     const ts2 = new TrafficSignal(ts1.red + ts1.yellow + ts1.green, defaultYellow, defaultGreen)
     const ts3 = new TrafficSignal(defaultRed, defaultYellow, defaultGreen)
     const ts4 = new TrafficSignal(defaultRed, defaultYellow, defaultGreen)
-    
+
     stateRef.current.signals = [ts1, ts2, ts3, ts4]
 
     const setTime = () => {
       const s = stateRef.current
       const nextIdx = s.nextGreen
       const dir = directionNumbers[nextIdx]
-      
+
       let cars = 0, bikes = 0, buses = 0, trucks = 0, rickshaws = 0
-      
+
       for (let i = 0; i < 3; i++) {
         s.vehiclesByDirection[dir][i].forEach(v => {
           if (v.crossed === 0) {
@@ -244,7 +244,7 @@ const Simulator = () => {
       let greenTime = Math.ceil(((cars * carTime) + (rickshaws * rickshawTime) + (buses * busTime) + (trucks * truckTime) + (bikes * bikeTime)) / 3)
       if (greenTime < defaultMinimum) greenTime = defaultMinimum
       else if (greenTime > defaultMaximum) greenTime = defaultMaximum
-      
+
       console.log(`Setting Next Green (${dir}) to ${greenTime}s`)
       s.signals[nextIdx].green = greenTime
     }
@@ -252,7 +252,7 @@ const Simulator = () => {
     const timer = setInterval(() => {
       const s = stateRef.current
       if (!s.sessionActive) return
-      
+
       s.timeElapsed++
       if (s.timeElapsed >= 300) {
         s.sessionActive = false
@@ -262,7 +262,7 @@ const Simulator = () => {
       }
 
       const sig = s.signals[s.currentGreen]
-      
+
       if (s.currentYellow === 0) {
         sig.green--
         if (s.signals[s.nextGreen].red === detectionTime) {
@@ -282,8 +282,8 @@ const Simulator = () => {
           s.signals[s.nextGreen].red = curr.yellow + curr.green
         }
       }
-      s.signals.forEach((sig, i) => { 
-        if (i !== s.currentGreen) sig.red-- 
+      s.signals.forEach((sig, i) => {
+        if (i !== s.currentGreen) sig.red--
       })
     }, 1000)
 
@@ -294,7 +294,7 @@ const Simulator = () => {
 
       const typeNum = Math.floor(Math.random() * 5)
       const lane = typeNum === 4 ? 0 : Math.floor(Math.random() * 2) + 1
-      
+
       const prob = Math.random() * 1000
       let dirNum = 0
       if (prob < 400) dirNum = 0      // Right: 40%
@@ -363,38 +363,38 @@ const Simulator = () => {
         </div>
       </header>
 
-      <div className="card" style={{ 
-        padding: 0, 
-        overflow: 'hidden', 
-        border: '1px solid #333', 
-        borderRadius: '1.5rem', 
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)', 
-        background: '#000', 
-        position: 'relative', 
-        width: '100%', 
+      <div className="card" style={{
+        padding: 0,
+        overflow: 'hidden',
+        border: '1px solid #333',
+        borderRadius: '1.5rem',
+        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+        background: '#000',
+        position: 'relative',
+        width: '100%',
         maxWidth: '1600px',
         maxHeight: 'calc(100vh - 280px)', // Fits within viewport without scrolling
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center'
       }}>
-          {!isLoaded && (
-             <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000', zIndex: 10 }}>
-                <div style={{ textAlign: 'center' }}>
-                   <div style={{ width: 50, height: 50, border: '4px solid #f97316', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', marginBottom: '1.5rem' }} />
-                   <p style={{ fontWeight: 900, fontSize: '1.25rem', color: '#fff', letterSpacing: '0.1em' }}>INITIALIZING ENGINE...</p>
-                </div>
-             </div>
-          )}
-          <canvas ref={canvasRef} width={CANVAS_WIDTH} height={CANVAS_HEIGHT} style={{ 
-            maxWidth: '100%', 
-            maxHeight: '100%', 
-            width: 'auto', 
-            height: 'auto', 
-            display: 'block', 
-            borderRadius: '1.5rem',
-            objectFit: 'contain' 
-          }} />
+        {!isLoaded && (
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000', zIndex: 10 }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ width: 50, height: 50, border: '4px solid #f97316', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', marginBottom: '1.5rem' }} />
+              <p style={{ fontWeight: 900, fontSize: '1.25rem', color: '#fff', letterSpacing: '0.1em' }}>INITIALIZING ENGINE...</p>
+            </div>
+          </div>
+        )}
+        <canvas ref={canvasRef} width={CANVAS_WIDTH} height={CANVAS_HEIGHT} style={{
+          maxWidth: '100%',
+          maxHeight: '100%',
+          width: 'auto',
+          height: 'auto',
+          display: 'block',
+          borderRadius: '1.5rem',
+          objectFit: 'contain'
+        }} />
       </div>
 
       {stateRef.current.showStats && (
@@ -402,7 +402,7 @@ const Simulator = () => {
           <div className="card" style={{ padding: '3rem', maxWidth: '600px', width: '90%', textAlign: 'center', border: '1px solid var(--accent-primary)' }}>
             <h2 style={{ fontSize: '2.5rem', fontWeight: 900, color: '#f97316', marginBottom: '1rem' }}>SIMULATION COMPLETE</h2>
             <p style={{ color: '#999', marginBottom: '2rem' }}>300 Second Analysis Concluded</p>
-            
+
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', textAlign: 'left', marginBottom: '2.5rem' }}>
               {Object.keys(stateRef.current.vehiclesByDirection).map(dir => (
                 <div key={dir} style={{ background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '0.75rem' }}>
@@ -419,7 +419,7 @@ const Simulator = () => {
               <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.875rem' }}>Total Vehicles Processed</p>
             </div>
 
-            <button 
+            <button
               onClick={() => window.location.reload()}
               style={{ padding: '1rem 2.5rem', borderRadius: '2rem', background: '#fff', color: '#000', fontWeight: 800, cursor: 'pointer', border: 'none' }}
             >
@@ -429,7 +429,8 @@ const Simulator = () => {
         </div>
       )}
 
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         :root { --accent-primary: #f97316; --accent-gradient: linear-gradient(135deg, #f97316 0%, #fb7185 100%); }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         .card { background: rgba(255, 255, 255, 0.02); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 1rem; }

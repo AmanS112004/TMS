@@ -18,7 +18,7 @@ function App() {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [currentView, setCurrentView] = useState('dashboard') // 'dashboard' or 'simulator'
-  
+
   // Chat state
   const [isNarrating, setIsNarrating] = useState(false)
   const [chatMessages, setChatMessages] = useState([
@@ -46,7 +46,7 @@ function App() {
         body: JSON.stringify({ token: credential }),
       })
       const data = await response.json()
-      
+
       if (data.success) {
         setUser(data.user)
         localStorage.setItem('traffic_user', JSON.stringify(data.user))
@@ -80,7 +80,7 @@ function App() {
 
     try {
       setIsNarrating(true)
-      
+
       // Cleanup previous request if any
       if (abortControllerRef.current) abortControllerRef.current.abort()
       abortControllerRef.current = new AbortController()
@@ -92,12 +92,12 @@ function App() {
         signal: abortControllerRef.current.signal
       })
       const data = await response.json()
-      
+
       if (data.narrative && !abortControllerRef.current.signal.aborted) {
         // Setup Speech
         const utterance = new SpeechSynthesisUtterance(data.narrative)
         utteranceRef.current = utterance
-        
+
         utterance.onend = () => {
           setIsNarrating(false)
           utteranceRef.current = null
@@ -106,7 +106,7 @@ function App() {
           setIsNarrating(false)
           utteranceRef.current = null
         }
-        
+
         window.speechSynthesis.speak(utterance)
       } else {
         setIsNarrating(false)
@@ -140,16 +140,16 @@ function App() {
         }),
       })
       const data = await response.json()
-      
-      setChatMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: data.response || "I'm having trouble connecting to the traffic database." 
+
+      setChatMessages(prev => [...prev, {
+        role: 'assistant',
+        content: data.response || "I'm having trouble connecting to the traffic database."
       }])
     } catch (error) {
       console.error("Chat error:", error)
-      setChatMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: "System error: Chat offline." 
+      setChatMessages(prev => [...prev, {
+        role: 'assistant',
+        content: "System error: Chat offline."
       }])
     } finally {
       setIsChatLoading(false)
@@ -250,25 +250,25 @@ function App() {
 
   if (!user) {
     return (
-      <Login 
-        onSuccess={handleLoginSuccess} 
-        onFailure={() => console.error("Google Login Failed")} 
+      <Login
+        onSuccess={handleLoginSuccess}
+        onFailure={() => console.error("Google Login Failed")}
       />
     )
   }
 
   return (
     <div className="app-main">
-      <Navbar 
-        mode={mode} 
-        setMode={setMode} 
+      <Navbar
+        mode={mode}
+        setMode={setMode}
         currentView={currentView}
         setCurrentView={setCurrentView}
         onLogout={handleLogout}
         isChatOpen={isChatOpen}
         toggleChat={() => setIsChatOpen(!isChatOpen)}
       />
-      
+
       <div className="app-container dashboard-layout">
         <main className="main-content">
           {currentView === 'dashboard' ? (
@@ -363,7 +363,7 @@ function App() {
                         <Clock size={16} />
                         AI SIGNAL TIMING
                       </h3>
-                      <button 
+                      <button
                         onClick={handleNarrate}
                         className={`voice-btn ${isNarrating ? 'playing' : ''}`}
                         title="Explain traffic status"
@@ -418,7 +418,7 @@ function App() {
 
       {/* Floating Chatbot Widget */}
       <div className={`chatbot-widget ${isChatOpen ? 'open' : ''}`}>
-        <motion.div 
+        <motion.div
           className="chat-toggle"
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
@@ -428,7 +428,7 @@ function App() {
         </motion.div>
 
         {isChatOpen && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             className="chat-window card"
@@ -437,7 +437,7 @@ function App() {
               <Activity size={18} color="var(--accent-primary)" />
               <span style={{ fontWeight: 800, letterSpacing: '0.05em' }}>Traffic Assistant</span>
             </div>
-            
+
             <div className="chat-messages">
               {chatMessages.map((msg, i) => (
                 <div key={i} className={`message ${msg.role}`}>
@@ -454,8 +454,8 @@ function App() {
             </div>
 
             <form onSubmit={handleSendMessage} className="chat-input-area">
-              <input 
-                type="text" 
+              <input
+                type="text"
                 placeholder="Ask about traffic, signals..."
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
